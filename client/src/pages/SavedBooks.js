@@ -1,24 +1,17 @@
-import React from 'react';
 import { Jumbotron, Container, CardColumns, Card, Button } from 'react-bootstrap';
-import { useQuery, useMutation } from '@apollo/react-hooks'
-import { GET_ME } from '../utils/queries'
-import { REMOVE_BOOK } from '../utils/mutations'
 import Auth from '../utils/auth';
-import { removeBookId } from '../utils/localStorage';
+import { removeBookId } from "../utils/localStorage";
+import { useQuery, useMutation } from '@apollo/client';
+import { REMOVE_BOOK } from '../utils/mutations';
+import { GET_ME } from '../utils/queries';
+
 
 const SavedBooks = () => {
   const { loading, data } = useQuery(GET_ME);
-  const [deleteBook] = useMutation(REMOVE_BOOK);
-  const userData = data?.me || {};
+  const [removeBook] = useMutation(REMOVE_BOOK);
 
-  if (!userData?.username) {
-    return (
-      <h4>
-        Please log in first¡
-      </h4>
-    );
-  }
-  // create function that accepts the book's mongo _id value as param and deletes the book from the database
+  const userData = data?.me || [];
+
   const handleDeleteBook = async (bookId) => {
     const token = Auth.loggedIn() ? Auth.getToken() : null;
 
@@ -27,16 +20,8 @@ const SavedBooks = () => {
     }
 
     try {
-      await deleteBook({
-        variables: { bookId: bookId },
-        update: cache => {
-          const data = cache.readQuery({ query: GET_ME });
-          const userDataCache = data.me;
-          const savedBooksCache = userDataCache.savedBooks;
-          const updatedBookCache = savedBooksCache.filter((book) => book.bookId !== bookId);
-          data.me.savedBooks = updatedBookCache;
-          cache.writeQuery({ query: GET_ME, data: { data: { ...data.me.savedBooks } } })
-        }
+      await removeBook({
+        variables: { bookId },
       });
       removeBookId(bookId);
     } catch (err) {
@@ -44,7 +29,6 @@ const SavedBooks = () => {
     }
   };
 
-  // if data isn't here yet, say so
   if (loading) {
     return <h2>LOADING...</h2>;
   }
@@ -83,5 +67,6 @@ const SavedBooks = () => {
     </>
   );
 };
+
 
 export default SavedBooks;

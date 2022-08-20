@@ -1,21 +1,19 @@
-const { User } = require('../models');
-const { AuthenticationError } = require('apollo-server-express');
-const { signToken } = require('../utils/auth')
+const { User, Book } = require('../models');
+const { signToken } = require("../utils/auth");
+const { AuthenticationError } = require("apollo-server-express");
 
 const resolvers = {
     Query: {
         me: async (parent, args, context) => {
             if (context.user) {
-                const userData = await User.findOne({ _id: constext.user._id })
-                return userData
+                return User.findOne({ _id: context.user._id });
             }
-            throw new AuthenticationError('No user found with that id')
+            throw new AuthenticationError('Cannot find a user with this id!');
         }
     },
-
     Mutation: {
-        createUser: async (parent, args) => {
-            const user = await User.create(args);
+        addUser: async (parent, { username, email, password }) => {
+            const user = await User.create({ username, email, password });
             const token = signToken(user);
             return { token, user };
         },
@@ -29,29 +27,28 @@ const resolvers = {
             const correctPw = await user.isCorrectPassword(password);
 
             if (!correctPw) {
-                throw new AuthenticationError('Wrong password!');
+                throw new AuthenticationError('Incorrect password!');
             }
 
             const token = signToken(user);
             return { token, user };
         },
-        saveBook: async (parent, { bookData }, context) => {
-            const { user } = context
-            const updateUser = await User.findOneAndUpdate(
-                { _id: user._id },
+        saveBook: async (parent, args, context, bookToSave) => {
+            const bookData = bookToSave.variableValues.bookToSave;
+            const updatedUser = await User.findOneAndUpdate(
+                { _id: context.user._id },
                 { $addToSet: { savedBooks: bookData } },
                 { new: true }
-            )
-            return updateUser;
+            );
+            return updatedUser;
         },
-        removeBook: async (parent, { bookId }, context) => {
-            const { user } = context
-            const updateUser = await User.findOneAndUpdate(
-                { _id: user._id },
-                { $pull: { savedBooks: { bookId: bookId } } },
+        removeBook: async (parent, args, context) => {
+            const updatedUser = await User.findOneAndUpdate(
+                { _id: context.user._id },
+                { $pull: { savedBooks: { bookId: args.bookId } } },
                 { new: true }
             );
-            return updateUser;
+            return updatedUser;
         }
     }
-}
+};
